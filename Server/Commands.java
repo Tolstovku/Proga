@@ -1,6 +1,6 @@
 package Server;
 
-import Client.FallingInRiver;
+import Common.FallingInRiver;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.util.concurrent.*;
@@ -16,8 +16,8 @@ public class Commands {
      * @param map  Коллекция типа ConcurrentHashMap, в которую производится импорт объектов
      * @param path Путь к json-файлу, из которого производится импорт
      */
+    synchronized public static String importCHM(ConcurrentHashMap<Integer, FallingInRiver> map, String path) {
 
-    public static void importLHM(ConcurrentHashMap<Integer, FallingInRiver> map, String path) {
         if (fileExists(path)) {
             GsonBuilder builder = new GsonBuilder();
             Gson gson = builder.create();
@@ -39,10 +39,12 @@ public class Commands {
                     }
                 }
             } catch (Exception e) {
-                System.out.println(e);
+                e.printStackTrace();
             }
             System.out.println("Коллекция успешно импортирована");
+            return "Коллекция успешно импортирована";
         }
+        else return "Файл не найден";
     }
 
 
@@ -53,7 +55,7 @@ public class Commands {
      * @param path Путь к json-файлу, в который происходит сохранение
      */
 
-    public static void save(ConcurrentHashMap<Integer, FallingInRiver> map, String path) {
+    synchronized public static String save(ConcurrentHashMap<Integer, FallingInRiver> map, String path) {
 
         if (fileExists(path)) {
             try {
@@ -71,11 +73,12 @@ public class Commands {
                 }
 
             } catch (Exception e) {
-                System.out.println(e);
-
+                e.printStackTrace();
             }
             System.out.println("Коллекция успешно сохранена");
+            return "Коллекция успешно сохранена";
         }
+        else return "Файл не найден";
     }
 
     /**
@@ -84,10 +87,8 @@ public class Commands {
      * @param map Коллекция, информацию о которой необходимо вывести
      */
 
-    public static void info(Map map) {
-        System.out.println("Тип коллекции: " + map.getClass().toString().substring(6) + "\nКоличество элементов: " + map.size());
-        System.out.println("Содержимое коллекции: ");
-        check(map);
+    synchronized public static String info(Map map) {
+        return "Тип коллекции: " + map.getClass().toString().substring(6) + "\nКоличество элементов: " + map.size() + "\nСодержимое коллекции:" + check(map);
     }
 
     /**
@@ -96,26 +97,43 @@ public class Commands {
      * @param map  Коллекция типа ConcurrentHashMap из которой производится удаление элемента.
      * @param keyS Ключ, элементы с ключами меньше которого нужно удалить.
      */
-    public static void remove(ConcurrentHashMap<Integer, FallingInRiver> map, String keyS, String path) {
+
+    synchronized public static String remove(ConcurrentHashMap<Integer, FallingInRiver> map, String keyS) {
+        if (keyS == null) {
+            System.out.println("Файл не найден");
+            return "Файл не найден";
+        }
         if ((isInt(keyS)) || (keyS.equals("null"))) {
             Integer key = 0;
             if (!(keyS.equals("null"))) key = Integer.parseInt(keyS);
             if (map.containsKey(key)) {
                 map.remove(key);
                 System.out.println("Элемент успешно удален");
-            } else System.out.println("В коллекции нет элемента с таким ключем.");
+
+                return "Элемент успешно удален";
+            } else {
+                System.out.println("В коллекции нет элемента с таким ключем.");
+                return "В коллекции нет элемента с таким ключем.";
+            }
+        } else {
+            System.out.println("Неверный формат ключа.");
+            return "Неверный формат ключа.";
         }
-        else System.out.println("Неверный формат ключа.");
     }
 
     /**
      * @param map  Коллекция типа ConcurrentHashMap из которой производится удаление элементов.
      * @param keyS
      */
-    public static void remove_lower(ConcurrentHashMap<Integer, FallingInRiver> map, String keyS, String path) {
+
+    synchronized public static String remove_lower(ConcurrentHashMap<Integer, FallingInRiver> map, String keyS) {
+        if (keyS == null) {
+            System.out.println("Файл не найден");
+            return "Файл не найден";
+        }
         if (isInt(keyS) || (keyS == "null")) {
             Integer key = 0;
-            if (keyS !="null") key = Integer.parseInt(keyS);
+            if (keyS != "null") key = Integer.parseInt(keyS);
             boolean flag = false;
             Set entryset = map.entrySet();
             Iterator<Map.Entry> iter = entryset.iterator();
@@ -124,14 +142,21 @@ public class Commands {
                 if (mapEntryKey < key) {
                     flag = true;
                     map.remove(mapEntryKey);
-                    System.out.println("Элементы успешно удалены");
+                    return "Элементы успешно удалены";
                 }
-
             }
-            if (flag == true) System.out.println("Элементы успешно удалены");
-            else System.out.println("В коллекции нет элементов, с ключом, меньше " + key);
+            if (flag == true) {
+                System.out.println("Элементы успешно удалены");
+                return "Элементы успешно удалены";
+            }
+            else {
+                System.out.println("В коллекции нет элементов, с ключом, меньше " + key);
+                return "В коллекции нет элементов, с ключом, меньше " + key;
+            }
+        } else{
+            System.out.println("Неверный формат ключа.");
+            return "Неверный формат ключа.";
         }
-        else System.out.println("Неверный формат ключа.");
     }
 
     /**
@@ -139,15 +164,18 @@ public class Commands {
      *
      * @param map Коллекция, содержимое которой необходимо вывести.
      */
-    public static void check(Map map) {
+    synchronized public static String check(Map map) {
+        String content = "";
         GsonBuilder builder = new GsonBuilder();
         Gson gson = builder.create();
         Set entrySet = map.entrySet();
         Iterator<Map.Entry> iter = entrySet.iterator();
+        if (iter.hasNext()) content = gson.toJson(iter.next().getValue());
         while (iter.hasNext()) {
             FallingInRiver f = (FallingInRiver) iter.next().getValue();
-            System.out.println(gson.toJson(f));
+            content = ("\n" + gson.toJson(f));
         }
+        return content;
     }
 
     /**
@@ -156,20 +184,24 @@ public class Commands {
      * @param map    Коллекция типа ConcurrentHashMap в которую необходимо добавить элемент-событие "Падение в реку"
      * @param params json описание элемента.
      */
-    public static void addFall(ConcurrentHashMap<Integer, FallingInRiver> map, String params, String path) {
+    synchronized public static String addFall(ConcurrentHashMap<Integer, FallingInRiver> map, String params) {
         GsonBuilder builder = new GsonBuilder();
         Gson gson = builder.create();
         String json = ("{" + params + "}");
         try {
             FallingInRiver f = gson.fromJson(json, FallingInRiver.class);
-            if (map.containsKey(f.getId())) System.out.println("Элемент с таким ключе уже существует");
+            if (map.containsKey(f.getId())) {
+                System.out.println("Элемент с таким ключем уже существует");
+                return "Элемент с таким ключем уже существует";
+            }
             else {
                 map.put(f.getId(), new FallingInRiver(f.getId(), f.getCharName(), f.getSplashLvl(), f.getDepth()));
                 System.out.println("Элемент успешно добавлен");
+                return "Элемент успешно добавлен";
             }
-        }
-        catch(Exception e) {
+        } catch (Exception e) {
             System.out.println("Неверный формат создания элемента");
+            return "Неверный формат создания элемента";
         }
 
     }
@@ -177,7 +209,8 @@ public class Commands {
     /**
      * Вывести информацию о командах
      */
-    public static void help() {
+
+    synchronized public static void help() {
         System.out.println("import {path} : импортировать ConcurrentHashMap из json файла" + "\nremove {key} : удалить элемент из коллекции по его ключу"
                 + "\ninfo : вывести информацию о коллекции" + "\nsave : сохранить коллекцию в файл"
                 + "\nremove_lower {key} : удалить из коллекции все элементы, ключ которых меньше, чем заданный"
@@ -195,16 +228,15 @@ public class Commands {
     }
 
     private static boolean fileExists(String path) {
-
-        File f = new File(path);
-        if (f.exists() && !f.isDirectory())
-
-        {
-            return true;
-        } else {
+        if (path == null) {
             System.out.println("Файл не найден");
             return false;
-
+        }
+        File f = new File(path);
+        if (f.exists() && !f.isDirectory()) return true;
+        else {
+            System.out.println("Файл не найден");
+            return false;
         }
     }
 
@@ -213,7 +245,8 @@ public class Commands {
      *
      * @param map Коллекция типа ConcurrentHashMap в которую необходимо добавить элемент-событие "Падение в реку"
      */
-    public static void checkOrder(ConcurrentHashMap<Integer, FallingInRiver> map){
+    //Не используется
+    synchronized public static void checkOrder(ConcurrentHashMap<Integer, FallingInRiver> map) {
         GsonBuilder builder = new GsonBuilder();
         Gson gson = builder.create();
         TreeMap<Integer, FallingInRiver> testMap = new TreeMap<>(map);

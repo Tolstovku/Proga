@@ -1,5 +1,6 @@
 package Client;
 
+import Common.FallingInRiver;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 

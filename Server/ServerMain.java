@@ -1,85 +1,54 @@
 package Server;
 
-import Client.FallingInRiver;
 
+import Common.FallingInRiver;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerMain {
     public static void main(String[] args) {
-        //Old part
+        DatagramPacket receivePacket = null;
+        DatagramSocket serverSocket;
+        boolean running;
+        ConcurrentHashMap<Integer, FallingInRiver> map = new ConcurrentHashMap<>();
+        Integer port;
         String path = args[0];
         String command = "";
         String param = "";
         Scanner in = new Scanner(System.in);
-        Integer port = null;
-        ConcurrentHashMap<Integer, FallingInRiver> map = new ConcurrentHashMap<>();
-        Commands.importLHM(map, path);
+        Commands.importCHM(map, path);
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
                 Commands.save(map, path)
         ));
-        UDPServer server = null;
-        for (;;) {
-            System.out.println("Введите порт:");
+        ////Проверка, указан ли порт в аргументах запуска
+        for (; ; ) {
             try {
-                port = Integer.parseInt(in.nextLine());
-                server = new UDPServer(port, map);
+                if (args.length < 2) {
+                    System.out.println("Введите порт:");
+                    port = Integer.parseInt(in.nextLine());
+                } else port = Integer.parseInt(args[1]);
+                serverSocket = new DatagramSocket(port);
                 break;
             } catch (Exception e) {
                 System.out.println("Ошибка доступа к порту.");
             }
         }
-        server.start();
-        while ((!command.equals("q")) && (!command.equals("Q"))) {
-            String str = "";
-            System.out.println("Введите команду. \nДля помощи введите pomogiti или help. \nДля выхода введите q / Q");
-            str = in.nextLine();
-            if ((str.contains("{")) && (str.contains("}"))) {
-                command = str.substring(0, str.indexOf("{"));
-                param = str.substring(str.indexOf("{") + 1, str.lastIndexOf("}"));
-            } else
-                command = str;
+        //Ждем пакета
+        for (; ; ) {
             try {
-                switch (command) {
-                    case "help":
-                    case "pomogiti":
-                        Commands.help();
-                        break;
-                    case "import":
-                        Commands.importLHM(map, param);
-                        break;
-                    case "info":
-                        Commands.info(map);
-                        break;
-                    case "save":
-                        Commands.save(map, path);
-                        break;
-                    case "remove":
-                        Commands.remove(map, (param), path);
-                        break;
-                    case "remove_lower":
-                        Commands.remove_lower(map, (param), path);
-                        break;
-                    case "check":
-                        Commands.check(map);
-                        break;
-                    case "add":
-                        Commands.addFall(map, param, path);
-                        break;
-                    case "check_order":
-                        Commands.checkOrder(map);
-                        break;
-                    case "Q":
-                    case "q":
-                        System.exit(0);
-                        break;
-                    default:
-                        System.out.println("Неверная команда");
-
-                }
+                byte[] recieveBuf = new byte[1000];
+                receivePacket = new DatagramPacket(recieveBuf, recieveBuf.length);
+                serverSocket.receive(receivePacket);
+                System.out.println("Пакет получен");
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            //Пакет получен - выполняем необходимые действия. Тот факт, что потоку нужно передавать path, кажется мне тупым, мб надо пофиксить.
+            new CommandExecutor(receivePacket, serverSocket, map, path).start();
+
         }
     }
 }
