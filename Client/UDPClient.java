@@ -8,8 +8,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class UDPClient {
     public static void main(String[] args) {
+
         String command;
         ConcurrentHashMap<Integer, FallingInRiver> falls = null;
+
         Integer port = null;
         InetAddress address = null;
         DatagramSocket socket = null;

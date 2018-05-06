@@ -3,7 +3,6 @@ package Server;
 import Common.FallingInRiver;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import java.util.concurrent.*;
 
 import java.io.*;
@@ -18,6 +17,7 @@ public class Commands {
      * @param path Путь к json-файлу, из которого производится импорт
      */
     synchronized public static String importCHM(ConcurrentHashMap<Integer, FallingInRiver> map, String path) {
+
         if (fileExists(path)) {
             GsonBuilder builder = new GsonBuilder();
             Gson gson = builder.create();
@@ -74,7 +74,6 @@ public class Commands {
 
             } catch (Exception e) {
                 e.printStackTrace();
-
             }
             System.out.println("Коллекция успешно сохранена");
             return "Коллекция успешно сохранена";
@@ -98,6 +97,7 @@ public class Commands {
      * @param map  Коллекция типа ConcurrentHashMap из которой производится удаление элемента.
      * @param keyS Ключ, элементы с ключами меньше которого нужно удалить.
      */
+
     synchronized public static String remove(ConcurrentHashMap<Integer, FallingInRiver> map, String keyS) {
         if (keyS == null) {
             System.out.println("Файл не найден");
@@ -109,6 +109,7 @@ public class Commands {
             if (map.containsKey(key)) {
                 map.remove(key);
                 System.out.println("Элемент успешно удален");
+
                 return "Элемент успешно удален";
             } else {
                 System.out.println("В коллекции нет элемента с таким ключем.");
@@ -124,6 +125,7 @@ public class Commands {
      * @param map  Коллекция типа ConcurrentHashMap из которой производится удаление элементов.
      * @param keyS
      */
+
     synchronized public static String remove_lower(ConcurrentHashMap<Integer, FallingInRiver> map, String keyS) {
         if (keyS == null) {
             System.out.println("Файл не найден");
