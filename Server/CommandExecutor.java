@@ -32,7 +32,7 @@ public class CommandExecutor extends Thread {
 
 
 
-    synchronized public void run() {
+    public void run() {
         str = "";
         str = new String(receiveBuf).trim();
         System.out.println("Команда - " + str);
@@ -45,31 +45,31 @@ public class CommandExecutor extends Thread {
             switch (command) {
                 case "import":
                     respond = Commands.importCHM(map, param);
-                    sendBuf = respond.getBytes();
+                    sendBuf = serializeMap(map);
                     break;
                 case "info":
                     respond = Commands.info(map);
-                    sendBuf = respond.getBytes();
+                    sendBuf = serializeMap(map);
                     break;
                 case "save":
                     respond = Commands.save(map, path);
-                    sendBuf = respond.getBytes();
+                    sendBuf = serializeMap(map);
                     break;
                 case "remove":
                     respond = Commands.remove(map, param);
-                    sendBuf = respond.getBytes();
+                    sendBuf = serializeMap(map);
                     break;
                 case "remove_lower":
                     respond = Commands.remove_lower(map, param);
-                    sendBuf = respond.getBytes();
+                    sendBuf = serializeMap(map);
                     break;
                 case "check":
                     respond = Commands.check(map);
-                    sendBuf = respond.getBytes();
+                    sendBuf = serializeMap(map);
                     break;
                 case "add":
                     respond = Commands.addFall(map, param);
-                    sendBuf = respond.getBytes();
+                    sendBuf = serializeMap(map);
                     break;
                 case "start":
                     sendBuf = serializeMap(map);
@@ -82,7 +82,7 @@ public class CommandExecutor extends Thread {
                 default:
                     System.out.println("Неверная команда");
                     respond = "Неверная команда";
-                    sendBuf = respond.getBytes();
+                    sendBuf = serializeMap(map);
             }
         }
             catch(Exception e){

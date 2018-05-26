@@ -1,7 +1,7 @@
 package Server;
 
-
 import Common.FallingInRiver;
+import com.sun.security.ntlm.Server;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -10,16 +10,21 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerMain {
     public static void main(String[] args) {
+
+
         DatagramPacket receivePacket = null;
         DatagramSocket serverSocket;
         boolean running;
         ConcurrentHashMap<Integer, FallingInRiver> map = new ConcurrentHashMap<>();
         Integer port;
-        String path = args[0];
+        String path = args[0]; // Менять когда на другой платформе
         String command = "";
         String param = "";
         Scanner in = new Scanner(System.in);
         Commands.importCHM(map, path);
+        ServerGUI gui = new ServerGUI("Server", map);
+        gui.init();
+
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
                 Commands.save(map, path)
         ));
@@ -27,8 +32,9 @@ public class ServerMain {
         for (; ; ) {
             try {
                 if (args.length < 2) {
-                    System.out.println("Введите порт:");
-                    port = Integer.parseInt(in.nextLine());
+                    //System.out.println("Введите порт:");
+                    port = 1337;
+                    //port = Integer.parseInt(in.nextLine());
                 } else port = Integer.parseInt(args[1]);
                 serverSocket = new DatagramSocket(port);
                 break;
