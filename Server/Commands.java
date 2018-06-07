@@ -3,6 +3,7 @@ package Server;
 import Common.FallingInRiver;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import jdk.nashorn.internal.runtime.ECMAException;
 
 import java.util.concurrent.*;
 
@@ -233,13 +234,14 @@ public class Commands {
                      System.out.println("Элемент с таким ключем уже существует");
                      return "Элемент с таким ключем уже существует";
                  } else {
+                     if (f.getX()>800 || f.getY()>400 || f.getSplashLvl()>10 || f.getDepth()>10 || f.getX()<0 || f.getY()<0 || f.getSplashLvl()<0 || f.getDepth()<0) throw new Exception();
                      map.put(f.getId(), new FallingInRiver(f.getId(), f.getCharName(), f.getSplashLvl(), f.getDepth(), f.getColor().toString(), f.getX(), f.getY()));
                      System.out.println("Элемент успешно добавлен");
                      return "Элемент успешно добавлен";
                  }
              } catch (Exception e) {
-                 System.out.println("Неверный формат создания элемента");
-                 return "Неверный формат создания элемента";
+                 System.out.println("Ошибка добавления обьекта. Проверьте вводимые данные.");
+                 return "Ошибка добавления обьекта. Проверьте вводимые данные.";
              }
          }
          finally {

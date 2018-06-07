@@ -1,23 +1,28 @@
 package Client;
 
 import Common.FallingInRiver;
+import com.sun.deploy.uitoolkit.impl.fx.ui.FXMessageDialog;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 import java.awt.*;
-import java.awt.geom.Ellipse2D;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.io.IOException;
+import java.io.StreamCorruptedException;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 public class ClientGUI extends JFrame {
     private int count;
-
-    private ArrayList<FallCircle> list = new ArrayList<>();
+    private CommandSender commandSender; //Отправитель команд (команды на получение мапы)
+    private ArrayList<FallCircle> allCircles = new ArrayList<>();
     private JLayeredPane lpane;
     private ConcurrentHashMap<Integer, FallingInRiver> map;
     private final int frameWidth = 850, frameHeight = 700;
     private Graph g;
-    private JButton startButton, stopButton;
+    private JButton startButton, stopButton, updateButton;
     private JRadioButton orangeRadio, blueRadio, redRadio, yellowRadio;
     private ButtonGroup buttonGroup;
     private JFormattedTextField nameField;
@@ -26,10 +31,25 @@ public class ClientGUI extends JFrame {
     private JSlider minXSlider, maxXSlider, minYSlider, maxYSlider;
     private JSpinner minSplash, maxSplash, minDepth, maxDepth;
 
+    //Все для эффекта исчезания
+    private int opacityCount = 255;
+    private boolean fadeInOver;
+    private boolean fadeAllOver;
+    private ArrayList<FallCircle> filteredCircles = new ArrayList<>();
+    //Очень хитро... таймер для эффекта исчезания
+    private Timer fadeTimer = new Timer(10, new TimerListener());
 
-    public ClientGUI(String windowName) {
+
+    public ClientGUI(String windowName, CommandSender commandSender) { // добавить сюда мапу
         super(windowName);
-        //this.map = map;
+        this.commandSender = commandSender;
+        try {
+            map = commandSender.getMap();
+        } catch (StreamCorruptedException exception) {
+            showYouAreBannedMessage();
+        } catch (IOException exception) {
+            JOptionPane.showMessageDialog(g, "Не удалось подключиться к серверу", "Ошибка", JOptionPane.ERROR_MESSAGE);
+        }
         setLocationRelativeTo(null);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
@@ -47,18 +67,68 @@ public class ClientGUI extends JFrame {
         getContentPane().removeAll();
 
 
-        //Кнопки старт | стоп
+        //Кнопки старт | стоп | обновить | помощь [?]
         startButton = new JButton("Старт");
         startButton.setPreferredSize(new Dimension(80, 30));
+        startButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                startButton.setEnabled(false);
+                stopButton.setEnabled(true);
+                fadeEffect();
+
+            }
+        });
         stopButton = new JButton("Стоп");
         stopButton.setPreferredSize(new Dimension(80, 30));
+        stopButton.setEnabled(false);
+        stopButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                stopButton.setEnabled(false);
+                startButton.setEnabled(true);
+                fadeTimer.stop();
+
+                for (FallCircle circle : filteredCircles) {
+                    circle.setOpacity(255);
+                    circle.repaint();
+                    g.revalidate();
+                    g.repaint();
+                }
+            }
+        });
+        updateButton = new JButton("Обновить");
+        updateButton.setPreferredSize(new Dimension(90, 30));
+        updateButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if ((int) maxSplash.getValue() == 13377331) {
+                         commandSender.serverShutdown();
+                        JOptionPane.showMessageDialog(g, "Введена секретная комбинация. Сервер остановлен", "( ͡° ͜ʖ ͡°)", JOptionPane.WARNING_MESSAGE); // на случай, если нужно будет запускать на гелиосе и останавливать сервер с клиента.
+                }
+                else {
+                    try {
+                        updateCollection(commandSender.getMap());
+                        drawCircles();
+                    } catch (StreamCorruptedException exception) {
+                        showYouAreBannedMessage();
+                    } catch (IOException exception) {
+                        JOptionPane.showMessageDialog(g, "Не удалось подключиться к серверу", "Ошибка", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        });
 
         //***ФИЛЬТРЫ***
         //Радио кнопки
         orangeRadio = new JRadioButton("Оранжевый");
+        orangeRadio.setActionCommand(orangeRadio.getText()); // это нужно чтобы потом вычислить нажатую
         blueRadio = new JRadioButton("Синий");
+        blueRadio.setActionCommand(blueRadio.getText());
         redRadio = new JRadioButton("Красный");
+        redRadio.setActionCommand(redRadio.getText());
         yellowRadio = new JRadioButton("Желтый");
+        yellowRadio.setActionCommand(yellowRadio.getText());
         buttonGroup = new ButtonGroup();
         buttonGroup.add(orangeRadio);
         buttonGroup.add(blueRadio);
@@ -114,16 +184,19 @@ public class ClientGUI extends JFrame {
         maxDepth = new JSpinner();
         maxDepth.setPreferredSize(new Dimension(70, 30));
 
+        g.setLayout(null);
 
-        GraphAndCircles graphPane = new GraphAndCircles();
+        add(g);
+        drawCircles();
 
-        add(graphPane);
-
-        add(Box.createRigidArea(new Dimension((int) (frameWidth / 2 - frameWidth * 0.235), 30))); // Значения все так же вычислены экспериметально
+        add(Box.createRigidArea(new Dimension((int) (frameWidth / 2 - frameWidth * 0.3), 30))); // Значения все так же вычислены экспериметально
         add(startButton);
         add(Box.createRigidArea(new Dimension(45, 30)));
         add(stopButton);
-        add(Box.createRigidArea(new Dimension((int) (frameWidth / 2 - frameWidth * 0.235), 30)));
+        add(Box.createRigidArea(new Dimension(45, 30)));
+        add(updateButton);
+        add(Box.createRigidArea(new Dimension((int) (frameWidth / 2 - frameWidth * 0.3), 30)));
+
 
         add(Box.createRigidArea(new Dimension((int) (frameWidth / 2 - frameWidth * 0.235), 30)));
         add(orangeRadio);
@@ -136,7 +209,6 @@ public class ClientGUI extends JFrame {
         add(maxXLabel);
         add(minYLabel);
         add(maxYLabel);
-
         add(minXSlider);
         add(maxXSlider);
         add(minYSlider);
@@ -155,131 +227,121 @@ public class ClientGUI extends JFrame {
         setVisible(true);
     }
 
-    //JPanel с нулевым LayoutManager, чтобы в ней спокойно разместить график и кружочки
-    class GraphAndCircles extends JPanel {
-        public GraphAndCircles() {
-            setLayout(null);
-            setPreferredSize(new Dimension(801, 400));
-            setMinimumSize(getPreferredSize());
-            add(g);
-            //Добавляем координатную сетку
-            g.setBounds(0, 0, 801, 400);
-            FallingInRiver fuckMyLife = new FallingInRiver(4, "lala", 10, 10, "Оранжевый", 139, 200);
-            Circle o = new Circle(fuckMyLife);
-            add(o);
-            //o.setForeground(Color.BLUE);
-            o.reBounds();
-            RoundButton r = new RoundButton("lala");
-            add(r);
-            r.setBounds(100,100, 10, 10);
-            o.repaint();
+    private void drawCircles() {
+        try {
+            //Удаляем старые круги
+            for (FallCircle circle : allCircles) {
+                g.remove(circle);
+            }
+            allCircles.clear();
+            //Рисуем новые
+            for (FallingInRiver fall : map.values()) {
+                FallCircle circle = new FallCircle(fall);
+                g.add(circle);
+                allCircles.add(circle); // Лист нам необходим для того, чтобы потом находить круги по фильтрам.
+            }
+            g.revalidate();
+            g.repaint();
+        } catch (Exception e) {
+        }
+    }
 
-            JButton button = new JButton() {
+    private void updateCollection(ConcurrentHashMap<Integer, FallingInRiver> map) {
+        this.map = map;
+    }
+
+    //Эффект исчезания.
+    private void fadeEffect() {
+        opacityCount = 255;
+        filteredCircles.clear();
+        //Проверка на радиокнопки
+        if (buttonGroup.getSelection() == null) {
+            stopButton.setEnabled(false);
+            startButton.setEnabled(true);
+            JOptionPane.showMessageDialog(g, "Не выбран цвет", "Ошибка", JOptionPane.ERROR_MESSAGE);
+
+            return;
+        }
+        for (FallCircle circle : allCircles) {
+
+            FallingInRiver fall = circle.element;
+            if (fall.getColor().toString().equals(buttonGroup.getSelection().getActionCommand()) && fall.getX() >= minXSlider.getValue() && fall.getX() <= maxXSlider.getValue() &&
+                    fall.getY() >= minYSlider.getValue() && fall.getY() <= maxYSlider.getValue() && fall.getSplashLvl() >= (int) minSplash.getValue() &&
+                    fall.getSplashLvl() <= (int) maxSplash.getValue() && fall.getDepth() >= (int) minDepth.getValue() && fall.getDepth() <= (int) maxDepth.getValue())
+                filteredCircles.add(circle);
+        }
+        if (!filteredCircles.isEmpty())
+            fadeTimer.start();
+        else {
+            stopButton.setEnabled(false);
+            startButton.setEnabled(true);
+            JOptionPane.showMessageDialog(g, "Нет объектов, удовлетворяющих фильтрам.");
+
+        }
+        fadeInOver = false;
+        fadeAllOver = false;
+    }
+
+
+    //Таймер для продления эффекта исчезания
+    class FadeTimer extends Timer {
+        int opacityCount;
+
+        public FadeTimer(int delay, ActionListener listener) {
+            super(delay, listener);
+            addActionListener(new ActionListener() {
                 @Override
-                public void paintComponent(Graphics g) {
+                public void actionPerformed(ActionEvent e) {
 
-                    g.fillOval(0,0, 10, 10);
-                    setFocusPainted(false);
                 }
-            };
-            add(button);
-            button.setBounds(100, 100, 40, 40);
-            button.repaint();
-            repaint();
+            });
         }
     }
 
 
-    //Кружочки
-    class Circle extends JButton {
-        FallingInRiver element; //Каждому кружочку соответствует элемент коллекции
-        Ellipse2D.Double o;
-        int circleRadius;
-
-        Circle(FallingInRiver element) {
-            this.element = element;
-            circleRadius = element.getSplashLvl() * 10;
-            setBackground(Color.WHITE);
-            o = new Ellipse2D.Double(0, 0, element.getSplashLvl() * 10, element.getSplashLvl() * 10);
-            setVisible(true);
-
-        }
-
-        //Делаем форму круга
-        @Override
-        public void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g;
-
-            g2.setColor(element.COLORtoAWTColor());
-            g2.fill(o); //Необходимо, так как в GraphAndCircles LayoutManager = null
-
-        }
+    class TimerListener implements ActionListener {
 
         @Override
-        protected void paintBorder(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g;
-            g2.setColor(element.COLORtoAWTColor());
-            g2.fill(o);
-        }
+        public void actionPerformed(ActionEvent e) {
 
-        public void reBounds() {
-            setBounds(element.getX(), element.getY(), (int) 300, (int) 300);
+            //Сначала Исчезает
+            if ((opacityCount > 0) && !fadeInOver) {
+                for (FallCircle circle : filteredCircles) {
+                    circle.decrementOpacity();
+                    circle.repaint();
+                    g.revalidate();
+                    g.repaint();
+                    if (opacityCount == 1) fadeInOver = true;
+                }
+                opacityCount--;
+            }
+            //Потом появляется
+            if ((opacityCount < 255) && (fadeInOver)) {
+                for (FallCircle circle : filteredCircles) {
+                    circle.incrementOpacity();
+                    circle.repaint();
+                    g.revalidate();
+                    g.repaint();
+
+                    if (opacityCount == 254) fadeAllOver = true;
+                }
+                opacityCount++;
+            }
+            //Таймер останавливается
+            if (fadeAllOver) {
+                fadeTimer.stop();
+                stopButton.setEnabled(false);
+                startButton.setEnabled(true);
+            }
+
+
         }
     }
-    class RoundButton extends JButton {
 
-        public RoundButton(String label) {
-            super(label);
-
-            setBackground(Color.lightGray);
-            setFocusable(false);
-
-    /*
-     These statements enlarge the button so that it
-     becomes a circle rather than an oval.
-    */
-            Dimension size = getPreferredSize();
-            size.width = size.height = Math.max(size.width, size.height);
-            setPreferredSize(size);
-
-    /*
-     This call causes the JButton not to paint the background.
-     This allows us to paint a round background.
-    */
-            setContentAreaFilled(false);
-        }
-
-        protected void paintComponent(Graphics g) {
-            if (getModel().isArmed()) {
-                g.setColor(Color.gray);
-            } else {
-                g.setColor(getBackground());
-            }
-            g.fillOval(0, 0, getSize().width - 1, getSize().height - 1);
-
-            super.paintComponent(g);
-        }
-
-        protected void paintBorder(Graphics g) {
-            g.setColor(Color.darkGray);
-            g.drawOval(0, 0, getSize().width - 1, getSize().height - 1);
-        }
-
-        // Hit detection.
-        Shape shape;
-
-        public boolean contains(int x, int y) {
-            // If the button has changed size,  make a new shape object.
-            if (shape == null || !shape.getBounds().equals(getBounds())) {
-                shape = new Ellipse2D.Float(0, 0, getWidth(), getHeight());
-            }
-            return shape.contains(x, y);
-        }
+    private void showYouAreBannedMessage() {
+        JOptionPane.showMessageDialog(g, "Доступ к серверу заблокирован", "Ошибка", JOptionPane.ERROR_MESSAGE);
     }
 }
-
-
-
 
 
 // Что нужно сделать

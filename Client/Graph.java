@@ -9,7 +9,7 @@ import java.awt.geom.Line2D;
 
 import static java.awt.Color.*;
 
-public class Graph extends JComponent {
+public class Graph extends JPanel {
 
 
     private int cellSize; // Размер клеток графа

@@ -19,14 +19,16 @@ public class CommandExecutor extends Thread {
     private String param;
     private String respond;
     private String path;
+    private boolean isBanned;
 
-    public CommandExecutor(DatagramPacket receivedPacket, DatagramSocket serverSocket, ConcurrentHashMap<Integer, FallingInRiver> map, String path) {
+    public CommandExecutor(DatagramPacket receivedPacket, DatagramSocket serverSocket, ConcurrentHashMap<Integer, FallingInRiver> map, String path, boolean isBanned) {
         this.serverSocket = serverSocket;
         this.clientIPAdress = receivedPacket.getAddress();
         this.clientPort = receivedPacket.getPort();
         this.map = map;
         this.receiveBuf = receivedPacket.getData();
         this.path = path;
+        this.isBanned = isBanned;
     }
     //Соединение
 
@@ -36,11 +38,13 @@ public class CommandExecutor extends Thread {
         str = "";
         str = new String(receiveBuf).trim();
         System.out.println("Команда - " + str);
+        if (isBanned)
+            System.out.println("Пользователь заблокирован");
         if ((str.contains("{")) && (str.contains("}"))) {
             command = str.substring(0, str.indexOf("{"));
             param = str.substring(str.indexOf("{") + 1, str.lastIndexOf("}"));
         } else
-            command = str;
+            command = str; //Тут такой бред потому что мне лень менять этот свич под новую лабу
         try {
             switch (command) {
                 case "import":
@@ -76,8 +80,10 @@ public class CommandExecutor extends Thread {
                     break;
                 case "Shutdown server":
                 case "Server shutdown":
-                    System.out.println("Server shutdown");
-                    System.exit(0);
+                    if (!isBanned) {
+                        System.out.println("Server shutdown");
+                        System.exit(0);
+                    } else  sendBuf[0] = 123;
                     break;
                 default:
                     System.out.println("Неверная команда");
@@ -89,6 +95,9 @@ public class CommandExecutor extends Thread {
                 e.printStackTrace();
             }
             try {
+                if (isBanned) {
+                    sendBuf[2] = 123; // Ломаю сендбуф в случае бана чтобы клиент не десериализовал коллекцию xD
+                }
                 sendPacket = new DatagramPacket(sendBuf, sendBuf.length, clientIPAdress, clientPort);
                 serverSocket.send(sendPacket);
                 System.out.println("Package sent to " + clientIPAdress + ":" + clientPort);

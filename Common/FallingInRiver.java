@@ -31,21 +31,6 @@ public class FallingInRiver implements Comparable<FallingInRiver>, Serializable 
 
     }
 
-    public Color COLORtoAWTColor() {
-        switch(color.toString()){
-            case "Оранжевый":
-                return ORANGE;
-            case "Синий":
-                return BLUE;
-            case "Красный":
-                return RED;
-            case "Желтый":
-                return YELLOW;
-            default:
-                return YELLOW;
-        }
-
-    }
 
 
     private final String charName;
@@ -59,7 +44,12 @@ public class FallingInRiver implements Comparable<FallingInRiver>, Serializable 
 
     public FallingInRiver(int id, String charName, int splashLvl, double depth, String color, int x, int y) {
         this.charName = charName;
-        this.splashLvl = splashLvl;
+        if (splashLvl==0)
+            this.splashLvl=1;
+        else if (splashLvl>10)
+            this.splashLvl=10;
+        else
+            this.splashLvl = splashLvl;
         this.depth = depth;
         this.id = id;
         this.timer = (int) (Math.random() * 11);
@@ -84,7 +74,9 @@ public class FallingInRiver implements Comparable<FallingInRiver>, Serializable 
                 this.color=COLOR.YELLOW;
                 break;
             default:
-                this.color=COLOR.YELLOW;
+                this.color=null;
+                //System.out.println("Недопустимый цвет у объекта " + charName + ", id:" + id + ". Установлен желтый цвет.");
+                //this.color=COLOR.YELLOW;
         }
 
     }
