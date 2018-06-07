@@ -1,7 +1,6 @@
 package Server;
 
 import Common.FallingInRiver;
-import com.sun.security.ntlm.Server;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -12,21 +11,28 @@ public class ServerMain {
     public static void main(String[] args) {
 
 
+        User user = null;
+
         DatagramPacket receivePacket = null;
         DatagramSocket serverSocket;
         boolean running;
         ConcurrentHashMap<Integer, FallingInRiver> map = new ConcurrentHashMap<>();
         Integer port;
-        String path = args[0]; // Менять когда на другой платформе
+        String path = "lol";
+        try {
+            path = args[0]; // Менять когда на другой платформе
+        }
+        catch (ArrayIndexOutOfBoundsException e){}
         String command = "";
         String param = "";
         Scanner in = new Scanner(System.in);
         Commands.importCHM(map, path);
         ServerGUI gui = new ServerGUI("Server", map);
         gui.init();
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() ->
-                Commands.save(map, path)
+        String finalPath1 = path;
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            Commands.save(gui.getMainCollection(), finalPath1);
+        }
         ));
         ////Проверка, указан ли порт в аргументах запуска
         for (; ; ) {
@@ -49,12 +55,16 @@ public class ServerMain {
                 receivePacket = new DatagramPacket(recieveBuf, recieveBuf.length);
                 serverSocket.receive(receivePacket);
                 System.out.println("Пакет получен");
+                user = new User(receivePacket.getAddress(), receivePacket.getPort(), false);
+                gui.addUser(user);
+                gui.updateUsersTable();
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
             //Пакет получен - выполняем необходимые действия. Тот факт, что потоку нужно передавать path, кажется мне тупым, мб надо пофиксить.
-            new CommandExecutor(receivePacket, serverSocket, map, path).start();
-
+            boolean isBanned = gui.getUsersList().get(gui.getUsersList().indexOf(user)).isBanned();
+            new CommandExecutor(receivePacket, serverSocket, gui.getMainCollection(), path, isBanned).start();
         }
     }
 }
