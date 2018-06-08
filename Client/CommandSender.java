@@ -34,14 +34,7 @@ public class CommandSender {
         DatagramPacket receivePacket = null;
 
         //Отправляем команду на сервер
-        try {
             receivePacket = sendCommand(sendBuf, receiveBuf);
-    } catch (SocketTimeoutException e) {
-        System.out.println("Socket timed out");
-        //System.exit(0);
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
 
         //Восстанавливаем мапу
     try {
@@ -72,7 +65,6 @@ public class CommandSender {
             --i;
         }
         byte[] trimmedBuf = Arrays.copyOf(buffer, i + 1);
-
         ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(trimmedBuf));
         ConcurrentHashMap<Integer, FallingInRiver> map = (ConcurrentHashMap<Integer, FallingInRiver>) ois.readObject();
         return map;

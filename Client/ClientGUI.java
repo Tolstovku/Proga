@@ -184,8 +184,9 @@ public class ClientGUI extends JFrame {
         maxDepth = new JSpinner();
         maxDepth.setPreferredSize(new Dimension(70, 30));
 
-        g.setLayout(null);
 
+        //Добавляем обьекты
+        g.setLayout(null);
         add(g);
         drawCircles();
 
@@ -214,7 +215,6 @@ public class ClientGUI extends JFrame {
         add(minYSlider);
         add(maxYSlider);
         add((Box.createRigidArea(new Dimension((frameWidth), 3))));
-
         add(minSplashLabel);
         add(minSplash);
         add(maxSplashLabel);
@@ -345,6 +345,6 @@ public class ClientGUI extends JFrame {
 
 
 // Что нужно сделать
-
+// Сделать постоянный слушатель чтобы сообщение о бане выскакивало сразу с таймаутом
 
 
