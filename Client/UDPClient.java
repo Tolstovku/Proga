@@ -1,15 +1,7 @@
 package Client;
 
 
-import Common.FallingInRiver;
-import Server.Commands;
-import sun.reflect.annotation.EnumConstantNotPresentExceptionProxy;
-import javax.swing.*;
 import java.net.*;
-import java.nio.ByteBuffer;
-import java.util.*;
-import java.io.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class UDPClient {
     Integer port = null;
@@ -26,14 +18,32 @@ public class UDPClient {
                 port = Integer.parseInt(args[0]);
             address = InetAddress.getLocalHost();
             socket = new DatagramSocket();
-            socket.setSoTimeout(2000);
+            socket.setSoTimeout(1000);
         } catch (Exception var14) {
             System.out.println("Ошибка соединения.");
         }
 
-        CommandSender commandSender = new CommandSender(address, port, socket);
-        ClientGUI gui = new ClientGUI("Клиент", commandSender);
-        gui.init();
+        ConnectionHandler.configure(address, port, socket);
+        SingletonGUI.getGUI();
+        SingletonGUI.initGUI();
+
+        final DatagramSocket finalSocket = socket; // чтобы работало в лямбде
+        new Thread(() -> {
+            for(;;) {
+                byte[] sendBuf;
+                byte[] receiveBuf = new byte[10000000];
+                DatagramPacket receivePacket = new DatagramPacket(receiveBuf, receiveBuf.length);
+                try {
+                    finalSocket.receive(receivePacket);
+                    ConnectionHandler.handlePacket(receivePacket);
+                } catch (SocketTimeoutException e) {}
+                catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.println("Something very weird happened");
+                }
+            }
+
+        }).start();
 
     }
 }

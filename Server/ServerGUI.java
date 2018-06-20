@@ -8,6 +8,8 @@ import javax.swing.border.Border;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,7 +17,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ServerGUI extends JFrame {
 
     private String savePath = "C:/Users/Daniil/iCloudDrive/ИТМО/1 курс/2 семестр/Лабы/Програмированние/Lab6/src/d.json";
-    private ConcurrentHashMap<Integer, FallingInRiver> mainCollection;
     private final String[] collectionColumnNames = {"ID", "Имя", "Брызги",
             "Глубина", "Цвет", "Координата X", "Координата Y",}, usersColumnNames = {"IP Адресс", "Порт", "Бан"};
     private JMenuBar menuBar;
@@ -26,16 +27,17 @@ public class ServerGUI extends JFrame {
             colorLabel, xLabel, yLabel;
     private JTextField idField, nameField, splashField, depthField,
             colorField, xField, yField;
-    private JButton addButton, removeButton, removeLowerButton, helpButton,undoButton, redoButton;
+    private JButton addButton, removeButton, removeLowerButton, helpButton, undoButton, redoButton;
     private DefaultTableModel collectionModel, usersModel;
     private ArrayList<User> usersList = new ArrayList<>();
     private Stack<Undoable> undoStack = new Stack<>();
     private Stack<Undoable> redoStack = new Stack<>();
     private Executor executor = new Executor();
+    private DatagramSocket socket;
 
-    public ServerGUI(String windowName, ConcurrentHashMap<Integer, FallingInRiver> collection) {
+    public ServerGUI(String windowName, DatagramSocket socket) {
         super(windowName);
-        mainCollection = collection;
+        this.socket = socket;
         setLocationRelativeTo(null);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
@@ -43,7 +45,7 @@ public class ServerGUI extends JFrame {
         setResizable(false);
         collectionModel = new DefaultTableModel();
         collectionModel.setColumnIdentifiers(collectionColumnNames);
-        updateTable(collection);
+        updateTable(SingletonCollection.getCollection());
         usersModel = new DefaultTableModel();
         usersModel.setColumnIdentifiers(usersColumnNames);
     }
@@ -242,7 +244,7 @@ public class ServerGUI extends JFrame {
                         color = "UNDEFINED";
                 }
                 AddCommand command = new AddCommand();
-                String params ="\"id\":" + idField.getText() + ",\"charName\":\"" + nameField.getText() + "\",\"splashLvl\":" + splashField.getText() +
+                String params = "\"id\":" + idField.getText() + ",\"charName\":\"" + nameField.getText() + "\",\"splashLvl\":" + splashField.getText() +
                         ",\"depth\":" + depthField.getText() + ",\"color\":\"" + color + "\",\"x\":" + xField.getText() + ",\"y\":" + yField.getText();
                 executor.configure(new AddCommand(), params);
                 executor.execute();
@@ -268,7 +270,7 @@ public class ServerGUI extends JFrame {
                 executor.execute();
             }
         });
-
+        removeLowerButton.setEnabled(false);
 
         helpButton = new JButton();
         helpButton.setIcon(UIManager.getIcon("OptionPane.questionIcon"));
@@ -287,14 +289,14 @@ public class ServerGUI extends JFrame {
                         "Цвет - Синий / Желтый / Красный / Оранжевый<br/>" +
                         "Координата X - число 0 .. 800<br/>" +
                         "Координата Y - число 0 .. 400</html>");
-               // info.setPreferredSize(new Dimension(500,500));
+                // info.setPreferredSize(new Dimension(500,500));
                 info.setFont(new Font("Arial", Font.PLAIN, 18));
-                Border paddingBorder = BorderFactory.createEmptyBorder(10,10,10,10);
+                Border paddingBorder = BorderFactory.createEmptyBorder(10, 10, 10, 10);
                 Border border = BorderFactory.createLineBorder(Color.BLACK, 1);
-                info.setBorder(BorderFactory.createCompoundBorder(border,paddingBorder));
+                info.setBorder(BorderFactory.createCompoundBorder(border, paddingBorder));
                 infoMenu.setBorder(BorderFactory.createLineBorder(Color.black, 1, true));
                 infoMenu.add(info);
-                infoMenu.show(collectionTable, collectionTable.getWidth()/4-30, 20);
+                infoMenu.show(collectionTable, collectionTable.getWidth() / 4 - 30, 20);
             }
         });
 
@@ -310,9 +312,10 @@ public class ServerGUI extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if (!undoStack.empty()) {
                     Undoable command = undoStack.pop();
-                    mainCollection = command.undo();
-                    updateTable(mainCollection);
+                    SingletonCollection.setCollection(command.undo());
+                    updateTable(SingletonCollection.getCollection());
                     redoStack.push(command);
+                    sendCollectionToAll();
                 }
             }
         });
@@ -332,8 +335,9 @@ public class ServerGUI extends JFrame {
                     executor.configure(command, command.getParams());
                     executor.setToClearUndoStack(false);
                     executor.execute();
-                    updateTable(mainCollection);
-                    undoStack.push((Undoable)command);
+                    updateTable(SingletonCollection.getCollection());
+                    undoStack.push((Undoable) command);
+                    sendCollectionToAll();
                 }
             }
         });
@@ -389,11 +393,8 @@ public class ServerGUI extends JFrame {
         }
     }
 
-    public ConcurrentHashMap<Integer, FallingInRiver> getMainCollection() {
-        return mainCollection;
-    }
 
-
+    //Таблице юзеров
     public class UsersFrame extends JFrame {
         UsersFrame() {
             setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -414,7 +415,7 @@ public class ServerGUI extends JFrame {
             usersTable.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent event) {
-                    if (event.getButton()==MouseEvent.BUTTON3) {
+                    if (event.getButton() == MouseEvent.BUTTON3) {
                         super.mousePressed(event);
                         Point point = event.getPoint();
                         int column = usersTable.columnAtPoint(point);
@@ -422,19 +423,19 @@ public class ServerGUI extends JFrame {
                         try {
                             usersTable.setColumnSelectionInterval(column, column);
                             usersTable.setRowSelectionInterval(row, row);
-                        } catch (Exception e) {return;
+                        } catch (Exception e) {
+                            return;
                         }
                         new PopUp(row, usersTable).show((Component) event.getSource(), event.getX(), event.getY());
-                    }
-                    else {
+                    } else {
                         Point point = event.getPoint();
                         int column = usersTable.columnAtPoint(point);
                         int row = usersTable.rowAtPoint(point);
                         try {
                             usersTable.setColumnSelectionInterval(column, column);
                             usersTable.setRowSelectionInterval(row, row);
+                        } catch (Exception e) {
                         }
-                        catch (Exception e){}
                     }
                 }
 
@@ -453,6 +454,8 @@ public class ServerGUI extends JFrame {
         }
     }
 
+
+    //Методы для работы с таблицей юзеров
     public void updateUsersTable() {
         Object[] row = new Object[3];
         usersModel.setRowCount(0);
@@ -466,12 +469,15 @@ public class ServerGUI extends JFrame {
         }
     }
 
-    public void addUser(User user){
+    public void addUser(User user) {
         if (!usersList.contains(user))
-        usersList.add(user);
+            usersList.add(user);
     }
 
-    public ArrayList<User> getUsersList() {return usersList;}
+    public ArrayList<User> getUsersList() {
+        return usersList;
+    }
+
 
     //Менюшка при нажатии правой кнопкой по строчке в таблице
     class PopUp extends JPopupMenu {
@@ -483,9 +489,12 @@ public class ServerGUI extends JFrame {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     try {
+                        boolean isBannedBefore, isBannedAfter;
                         InetAddress inetAddress = InetAddress.getByName(table.getValueAt(row, 0).toString());
                         int port = (int) table.getValueAt(row, 1);
                         User user = new User(inetAddress, port, true);
+                        if (!usersList.get(usersList.indexOf(user)).isBanned()==user.isBanned())
+                            sendBanMessage(user, true);
                         usersList.remove(user);
                         usersList.add(user);
                         updateUsersTable();
@@ -502,6 +511,8 @@ public class ServerGUI extends JFrame {
                         InetAddress inetAddress = InetAddress.getByName(table.getValueAt(row, 0).toString());
                         int port = (int) table.getValueAt(row, 1);
                         User user = new User(inetAddress, port, false);
+                        if (!usersList.get(usersList.indexOf(user)).isBanned()==user.isBanned())
+                            sendBanMessage(user, false);
                         usersList.remove(user);
                         usersList.add(user);
                         updateUsersTable();
@@ -519,37 +530,62 @@ public class ServerGUI extends JFrame {
     /* Паттерн стратегия для выполнения команд.
     *  Executor настраивается добавлением обьекта исполняемой команды и какого-либо String параметра, после чего запускается через execute.
     */
-    private class Executor{
+    private class Executor {
         private Command command;
         private String params;
         private boolean toClearUndoStack;
 
-        public void configure(Command command, String params){
-            this.command=command;
-            this.params=params;
+        public void configure(Command command, String params) {
+            this.command = command;
+            this.params = params;
         }
 
-        public void setToClearUndoStack(boolean bool){
-            toClearUndoStack=bool;
+        public void setToClearUndoStack(boolean bool) {
+            toClearUndoStack = bool;
         }
 
         public void execute() {
-            if (command!=null && params!=null) {
+            if (command != null && params != null) {
                 command.setParams(params);
-                Command.Feedback feedback = command.execute(mainCollection, params);
+                Command.Feedback feedback = command.execute(SingletonCollection.getCollection(), params);
                 String resultMessage = feedback.message;
                 pushToHistory(command, feedback);
                 JOptionPane.showMessageDialog(collectionTable, resultMessage, "Сообщение", JOptionPane.INFORMATION_MESSAGE);
-                updateTable(mainCollection);
-            }
-            else throw new RuntimeException("Executor is not configured");
-            if(toClearUndoStack) redoStack.clear();
+                if (feedback.wasExecuted) {
+                    updateTable(SingletonCollection.getCollection());
+                    if(command instanceof Undoable)
+                    sendCollectionToAll();
+                }
+            } else throw new RuntimeException("Executor is not configured");
+            if (toClearUndoStack) redoStack.clear();
             setToClearUndoStack(true);
         }
     }
 
-    private void pushToHistory (Command command, Command.Feedback feedback){
-        if (feedback.wasExecuted && command instanceof Undoable) undoStack.push((Undoable)command);
+    private void pushToHistory(Command command, Command.Feedback feedback) {
+        if (feedback.wasExecuted && command instanceof Undoable) undoStack.push((Undoable) command);
+    }
+
+    //Мне впадлу делать нормальную отправку сообщение поэтому тут как будто принимается сообщение юзером
+    private void sendCollectionToAll() {
+        for (User user : usersList) {
+            byte[] message = "start".getBytes();
+            if (!user.isBanned()) {
+                DatagramPacket fakeReceivedPacket = new DatagramPacket(message, message.length, user.getAddress(), user.getPort());
+                new CommandExecutor(fakeReceivedPacket, socket, SingletonCollection.getCollection(), false).start();
+            }
+
+        }
+    }
+
+    private void sendBanMessage(User user, boolean bannedOrUnbanned) {
+        byte[] message;
+        if (bannedOrUnbanned)
+            message = "start".getBytes();
+        else
+            message = "unban".getBytes();
+        DatagramPacket fakeReceivedPacket = new DatagramPacket(message, message.length, user.getAddress(), user.getPort());
+        new CommandExecutor(fakeReceivedPacket, socket, SingletonCollection.getCollection(), user.isBanned()).start();
     }
 }
 

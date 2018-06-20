@@ -12,6 +12,8 @@ public class ImportCommand extends Command implements Undoable {
     @Override
     public Feedback init(ConcurrentHashMap<Integer, FallingInRiver> map, String path) {
         if (fileExists(path)) {
+            ConcurrentHashMap<Integer,FallingInRiver> backup = new ConcurrentHashMap<Integer,FallingInRiver>(map);
+            map.clear();
             GsonBuilder builder = new GsonBuilder();
             Gson gson = builder.create();
             FileInputStream fis;
@@ -33,6 +35,7 @@ public class ImportCommand extends Command implements Undoable {
                     }
                 }
             } catch (Exception e) {
+                map =  new ConcurrentHashMap<Integer,FallingInRiver>(backup);
                 e.printStackTrace();
             } finally {
                 writeLock.unlock();

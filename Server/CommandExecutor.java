@@ -18,16 +18,14 @@ public class CommandExecutor extends Thread {
     private String command;
     private String param;
     private String respond;
-    private String path;
     private boolean isBanned;
 
-    public CommandExecutor(DatagramPacket receivedPacket, DatagramSocket serverSocket, ConcurrentHashMap<Integer, FallingInRiver> map, String path, boolean isBanned) {
+    public CommandExecutor(DatagramPacket receivedPacket, DatagramSocket serverSocket, ConcurrentHashMap<Integer, FallingInRiver> map, boolean isBanned) {
         this.serverSocket = serverSocket;
         this.clientIPAdress = receivedPacket.getAddress();
         this.clientPort = receivedPacket.getPort();
         this.map = map;
         this.receiveBuf = receivedPacket.getData();
-        this.path = path;
         this.isBanned = isBanned;
     }
     //Соединение
@@ -37,7 +35,7 @@ public class CommandExecutor extends Thread {
     public void run() {
         str = "";
         str = new String(receiveBuf).trim();
-        System.out.println("Команда - " + str);
+        //System.out.println("Команда - " + str);
         if (isBanned)
             System.out.println("Пользователь заблокирован");
         if ((str.contains("{")) && (str.contains("}"))) {
@@ -56,12 +54,12 @@ public class CommandExecutor extends Thread {
                     sendBuf = serializeMap(map);
                     break;
                 case "save":
-                    respond = Commands.save(map, path);
+                    //respond = Commands.save(map, path);
                     sendBuf = serializeMap(map);
                     break;
-                case "remove":
+                case "unban":
                     respond = Commands.remove(map, param);
-                    sendBuf = serializeMap(map);
+                    sendBuf = serializeString("Вы были разбанены");
                     break;
                 case "remove_lower":
                     respond = Commands.remove_lower(map, param);
@@ -83,7 +81,7 @@ public class CommandExecutor extends Thread {
                     if (!isBanned) {
                         System.out.println("Server shutdown");
                         System.exit(0);
-                    } else  sendBuf[0] = 123;
+                    }
                     break;
                 default:
                     System.out.println("Неверная команда");
@@ -96,7 +94,8 @@ public class CommandExecutor extends Thread {
             }
             try {
                 if (isBanned) {
-                    sendBuf[2] = 123; // Ломаю сендбуф в случае бана чтобы клиент не десериализовал коллекцию xD
+                    sendBuf=serializeString("Вы были забанены.");
+                    System.out.println(new String(sendBuf));
                 }
                 sendPacket = new DatagramPacket(sendBuf, sendBuf.length, clientIPAdress, clientPort);
                 serverSocket.send(sendPacket);
@@ -110,6 +109,15 @@ public class CommandExecutor extends Thread {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream out = new ObjectOutputStream(bos);
         out.writeObject(map);
+        out.flush();
+        out.close();
+        return bos.toByteArray();
+    }
+
+    private byte[] serializeString(String string) throws IOException{
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream out = new ObjectOutputStream(bos);
+        out.writeObject(string);
         out.flush();
         out.close();
         return bos.toByteArray();
