@@ -29,6 +29,8 @@ public class Commands {
 
      public static String importCHM(ConcurrentHashMap<Integer, FallingInRiver> map, String path) {
         if (fileExists(path)) {
+            ConcurrentHashMap<Integer,FallingInRiver> backup = new ConcurrentHashMap<Integer,FallingInRiver>(map);
+            map.clear();
             GsonBuilder builder = new GsonBuilder();
             Gson gson = builder.create();
             FileInputStream fis;
@@ -50,6 +52,7 @@ public class Commands {
                     }
                 }
             } catch (Exception e) {
+                map =  new ConcurrentHashMap<Integer,FallingInRiver>(backup);
                 e.printStackTrace();
             }
             finally {

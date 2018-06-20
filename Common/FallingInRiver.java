@@ -2,6 +2,7 @@ package Common;
 
 import java.awt.*;
 import java.io.Serializable;
+import java.time.OffsetDateTime;
 import java.util.Calendar;
 import java.text.SimpleDateFormat;
 import java.awt.color.*;
@@ -36,7 +37,7 @@ public class FallingInRiver implements Comparable<FallingInRiver>, Serializable 
     private final String charName;
     private final int splashLvl;
     private final double depth;
-    private final String timeStamp = new SimpleDateFormat("dd.mm.yyyy hh:mm").format(Calendar.getInstance().getTime());
+    private final OffsetDateTime timeStamp = OffsetDateTime.now();
     private final COLOR color;
     private final int x, y;
     private final int id;

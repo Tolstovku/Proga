@@ -1,25 +1,23 @@
 package Client;
 
 import Common.FallingInRiver;
-import com.sun.deploy.uitoolkit.impl.fx.ui.FXMessageDialog;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Stream;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class ClientGUI extends JFrame {
+    private ReentrantLock lock = new ReentrantLock();
     private int count;
-    private CommandSender commandSender; //Отправитель команд (команды на получение мапы)
     private ArrayList<FallCircle> allCircles = new ArrayList<>();
     private JLayeredPane lpane;
-    private ConcurrentHashMap<Integer, FallingInRiver> map;
+    private ConcurrentHashMap<Integer, FallingInRiver> collection;
     private final int frameWidth = 850, frameHeight = 700;
     private Graph g;
     private JButton startButton, stopButton, updateButton;
@@ -40,16 +38,9 @@ public class ClientGUI extends JFrame {
     private Timer fadeTimer = new Timer(10, new TimerListener());
 
 
-    public ClientGUI(String windowName, CommandSender commandSender) { // добавить сюда мапу
+    public ClientGUI(String windowName) { // добавить сюда мапу
         super(windowName);
-        this.commandSender = commandSender;
-        try {
-            map = commandSender.getMap();
-        } catch (StreamCorruptedException exception) {
-            showYouAreBannedMessage();
-        } catch (IOException exception) {
-            JOptionPane.showMessageDialog(g, "Не удалось подключиться к серверу", "Ошибка", JOptionPane.ERROR_MESSAGE);
-        }
+            ConnectionHandler.getMap();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
@@ -75,6 +66,7 @@ public class ClientGUI extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 startButton.setEnabled(false);
                 stopButton.setEnabled(true);
+                lock.lock();
                 fadeEffect();
 
             }
@@ -88,13 +80,13 @@ public class ClientGUI extends JFrame {
                 stopButton.setEnabled(false);
                 startButton.setEnabled(true);
                 fadeTimer.stop();
-
                 for (FallCircle circle : filteredCircles) {
                     circle.setOpacity(255);
                     circle.repaint();
                     g.revalidate();
                     g.repaint();
                 }
+                lock.unlock();
             }
         });
         updateButton = new JButton("Обновить");
@@ -103,18 +95,11 @@ public class ClientGUI extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if ((int) maxSplash.getValue() == 13377331) {
-                         commandSender.serverShutdown();
+                         ConnectionHandler.serverShutdown();
                         JOptionPane.showMessageDialog(g, "Введена секретная комбинация. Сервер остановлен", "( ͡° ͜ʖ ͡°)", JOptionPane.WARNING_MESSAGE); // на случай, если нужно будет запускать на гелиосе и останавливать сервер с клиента.
                 }
                 else {
-                    try {
-                        updateCollection(commandSender.getMap());
-                        drawCircles();
-                    } catch (StreamCorruptedException exception) {
-                        showYouAreBannedMessage();
-                    } catch (IOException exception) {
-                        JOptionPane.showMessageDialog(g, "Не удалось подключиться к серверу", "Ошибка", JOptionPane.ERROR_MESSAGE);
-                    }
+                        ConnectionHandler.getMap();
                 }
             }
         });
@@ -146,22 +131,22 @@ public class ClientGUI extends JFrame {
         maxYLabel.setPreferredSize(new Dimension((int) (frameWidth / 2 - frameWidth * 0.15) - 100, 25));
 
         //Слайдеры
-        minXSlider = new JSlider(0, (int) g.getMinimumSize().getWidth(), 8 * g.getCellSize()); // Все значения тут добыты экспериментальным путем
+        minXSlider = new JSlider(0, (int) g.getMinimumSize().getWidth(), 0); // Все значения тут добыты экспериментальным путем
         minXSlider.setMinorTickSpacing(40);
         minXSlider.setMajorTickSpacing(160);
         minXSlider.setPaintLabels(true);
         minXSlider.setPaintTicks(true);
-        maxXSlider = new JSlider(0, (int) g.getMinimumSize().getWidth(), 8 * g.getCellSize());
+        maxXSlider = new JSlider(0, (int) g.getMinimumSize().getWidth(), 20*g.getCellSize());
         maxXSlider.setMinorTickSpacing(40);
         maxXSlider.setMajorTickSpacing(160);
         maxXSlider.setPaintLabels(true);
         maxXSlider.setPaintTicks(true);
-        minYSlider = new JSlider(0, (int) g.getMinimumSize().getHeight(), 5 * g.getCellSize());
+        minYSlider = new JSlider(0, (int) g.getMinimumSize().getHeight(), 0);
         minYSlider.setMinorTickSpacing(20);
         minYSlider.setMajorTickSpacing(80);
         minYSlider.setPaintLabels(true);
         minYSlider.setPaintTicks(true);
-        maxYSlider = new JSlider(0, (int) g.getMinimumSize().getHeight(), 5 * g.getCellSize());
+        maxYSlider = new JSlider(0, (int) g.getMinimumSize().getHeight(), 10*g.getCellSize());
         maxYSlider.setMinorTickSpacing(20);
         maxYSlider.setMajorTickSpacing(80);
         maxYSlider.setPaintLabels(true);
@@ -184,8 +169,9 @@ public class ClientGUI extends JFrame {
         maxDepth = new JSpinner();
         maxDepth.setPreferredSize(new Dimension(70, 30));
 
-        g.setLayout(null);
 
+        //Добавляем обьекты
+        g.setLayout(null);
         add(g);
         drawCircles();
 
@@ -214,7 +200,6 @@ public class ClientGUI extends JFrame {
         add(minYSlider);
         add(maxYSlider);
         add((Box.createRigidArea(new Dimension((frameWidth), 3))));
-
         add(minSplashLabel);
         add(minSplash);
         add(maxSplashLabel);
@@ -235,7 +220,7 @@ public class ClientGUI extends JFrame {
             }
             allCircles.clear();
             //Рисуем новые
-            for (FallingInRiver fall : map.values()) {
+            for (FallingInRiver fall : collection.values()) {
                 FallCircle circle = new FallCircle(fall);
                 g.add(circle);
                 allCircles.add(circle); // Лист нам необходим для того, чтобы потом находить круги по фильтрам.
@@ -246,8 +231,11 @@ public class ClientGUI extends JFrame {
         }
     }
 
-    private void updateCollection(ConcurrentHashMap<Integer, FallingInRiver> map) {
-        this.map = map;
+    public void updateCollection(ConcurrentHashMap<Integer, FallingInRiver> newCollection) {
+        lock.lock();
+        collection = newCollection;
+        drawCircles();
+        lock.unlock();
     }
 
     //Эффект исчезания.
@@ -259,7 +247,7 @@ public class ClientGUI extends JFrame {
             stopButton.setEnabled(false);
             startButton.setEnabled(true);
             JOptionPane.showMessageDialog(g, "Не выбран цвет", "Ошибка", JOptionPane.ERROR_MESSAGE);
-
+            lock.unlock();
             return;
         }
         for (FallCircle circle : allCircles) {
@@ -276,26 +264,10 @@ public class ClientGUI extends JFrame {
             stopButton.setEnabled(false);
             startButton.setEnabled(true);
             JOptionPane.showMessageDialog(g, "Нет объектов, удовлетворяющих фильтрам.");
-
+            lock.unlock();
         }
         fadeInOver = false;
         fadeAllOver = false;
-    }
-
-
-    //Таймер для продления эффекта исчезания
-    class FadeTimer extends Timer {
-        int opacityCount;
-
-        public FadeTimer(int delay, ActionListener listener) {
-            super(delay, listener);
-            addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-
-                }
-            });
-        }
     }
 
 
@@ -332,6 +304,7 @@ public class ClientGUI extends JFrame {
                 fadeTimer.stop();
                 stopButton.setEnabled(false);
                 startButton.setEnabled(true);
+                lock.unlock();
             }
 
 
@@ -341,10 +314,14 @@ public class ClientGUI extends JFrame {
     private void showYouAreBannedMessage() {
         JOptionPane.showMessageDialog(g, "Доступ к серверу заблокирован", "Ошибка", JOptionPane.ERROR_MESSAGE);
     }
+
+    public void showMessage(String message){
+        JOptionPane.showMessageDialog(g, message);
+    }
 }
 
 
 // Что нужно сделать
-
+// Сделать постоянный слушатель чтобы сообщение о бане выскакивало сразу с таймаутом
 
 
