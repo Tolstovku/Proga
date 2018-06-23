@@ -2,9 +2,10 @@ package Server;
 
 import Common.FallingInRiver;
 import Server.CommandPattern.*;
+import Server.ORM.DBConnectionConfig;
+import Server.ORM.ORMManager;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
@@ -15,13 +16,14 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerGUI extends JFrame {
-
+    private ResourceBundle bundle = ResourceBundle.getBundle("Common.Resources.Resource");
     private String savePath = "C:/Users/Daniil/iCloudDrive/ИТМО/1 курс/2 семестр/Лабы/Програмированние/Lab6/src/d.json";
-    private final String[] collectionColumnNames = {"ID", "Имя", "Брызги",
-            "Глубина", "Цвет", "Координата X", "Координата Y",}, usersColumnNames = {"IP Адресс", "Порт", "Бан"};
+    private String[] collectionColumnNames = {"ID", bundle.getString("name"), bundle.getString("splash"),
+            bundle.getString("depth"), bundle.getString("color"), bundle.getString("x"), bundle.getString("y")},
+            usersColumnNames = {bundle.getString("ip"), bundle.getString("port"), bundle.getString("ban")};
     private JMenuBar menuBar;
     private JMenu controlMenu;
-    private JMenuItem menuItemImport, menuItemSave, menuUsers;
+    private JMenuItem menuItemImport, menuItemSave, menuConnections;
     private JTable collectionTable, usersTable;
     private JLabel idLabel, nameLabel, splashLabel, depthLabel,
             colorLabel, xLabel, yLabel;
@@ -35,8 +37,8 @@ public class ServerGUI extends JFrame {
     private Executor executor = new Executor();
     private DatagramSocket socket;
 
-    public ServerGUI(String windowName, DatagramSocket socket) {
-        super(windowName);
+    public ServerGUI(DatagramSocket socket) {
+        setTitle(bundle.getString("server"));
         this.socket = socket;
         setLocationRelativeTo(null);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -51,17 +53,28 @@ public class ServerGUI extends JFrame {
     }
 
     public void init() {
+
+
+        DBConnectionConfig.getData();
+
+        ORMManager<FallingInRiver> ORMManager = new ORMManager<>(FallingInRiver.class, DBConnectionConfig.url, DBConnectionConfig.login, DBConnectionConfig.password);
+
         setVisible(false);
+
         getContentPane().removeAll();
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            ORMManager.close();
+        }
+        ));
         //Верхняя менюшка
         menuBar = new JMenuBar();
-        controlMenu = new JMenu("Управление");
-        menuItemImport = new JMenuItem("Импорт");
+        controlMenu = new JMenu(bundle.getString("control"));
+        menuItemImport = new JMenuItem(bundle.getString("import"));
         menuItemImport.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new JFrame("Импорт") {
+                new JFrame(bundle.getString("import")) {
                     {
                         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
                         int width = 750;
@@ -69,10 +82,10 @@ public class ServerGUI extends JFrame {
                         setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
                         setSize(width, 135);
                         setResizable(false);
-                        JLabel msg = new JLabel("Введите путь к файлу импорта:");
+                        JLabel msg = new JLabel(bundle.getString("enterPath"));
                         JTextField pathField = new JTextField();
                         pathField.setPreferredSize(new Dimension(width - 10, 20));
-                        JButton innerImportButton = new JButton("Импорт");
+                        JButton innerImportButton = new JButton(bundle.getString("import"));
                         innerImportButton.addActionListener(new ActionListener() {
                             @Override
                             public void actionPerformed(ActionEvent e) {
@@ -97,7 +110,7 @@ public class ServerGUI extends JFrame {
                 };
             }
         });
-        menuItemSave = new JMenuItem("Сохранить");
+        menuItemSave = new JMenuItem(bundle.getString("save"));
         menuItemSave.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -105,17 +118,17 @@ public class ServerGUI extends JFrame {
                 executor.execute();
             }
         });
-        menuUsers = new JMenuItem("Подключения");
-        menuUsers.addActionListener(new ActionListener() {
+        menuConnections = new JMenuItem(bundle.getString("connections"));
+        menuConnections.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 new UsersFrame();
             }
         });
         menuBar.add(controlMenu);
-        controlMenu.add(menuItemImport);
-        controlMenu.add(menuItemSave);
-        controlMenu.add(menuUsers);
+        //controlMenu.add(menuItemImport);
+        //controlMenu.add(menuItemSave);
+        controlMenu.add(menuConnections);
         setJMenuBar(menuBar);
 
 
@@ -143,27 +156,27 @@ public class ServerGUI extends JFrame {
         idLabel.setPreferredSize(new Dimension(50, 20));
         //idLabel.setBorder(new LineBorder(Color.black));
 
-        nameLabel = new JLabel("Имя", SwingConstants.CENTER);
+        nameLabel = new JLabel(bundle.getString("name"), SwingConstants.CENTER);
         nameLabel.setPreferredSize(new Dimension(150, 20));
         //nameLabel.setBorder(new LineBorder(Color.black));
 
-        splashLabel = new JLabel("Брызги", SwingConstants.CENTER);
+        splashLabel = new JLabel(bundle.getString("splash"), SwingConstants.CENTER);
         splashLabel.setPreferredSize(new Dimension(60, 20));
         //splashLabel.setBorder(new LineBorder(Color.black));
 
-        depthLabel = new JLabel("Глубина", SwingConstants.CENTER);
+        depthLabel = new JLabel(bundle.getString("depth"), SwingConstants.CENTER);
         depthLabel.setPreferredSize(new Dimension(60, 20));
         //depthLabel.setBorder(new LineBorder(Color.black));
 
-        colorLabel = new JLabel("Цвет", SwingConstants.CENTER);
+        colorLabel = new JLabel(bundle.getString("color"), SwingConstants.CENTER);
         colorLabel.setPreferredSize(new Dimension(150, 20));
         //colorLabel.setBorder(new LineBorder(Color.black));
 
-        xLabel = new JLabel("Координата X", SwingConstants.CENTER);
+        xLabel = new JLabel(bundle.getString("x"), SwingConstants.CENTER);
         xLabel.setPreferredSize(new Dimension(100, 20));
         //xLabel.setBorder(new LineBorder(Color.black));
 
-        yLabel = new JLabel("Координата Y", SwingConstants.CENTER);
+        yLabel = new JLabel(bundle.getString("y"), SwingConstants.CENTER);
         yLabel.setPreferredSize(new Dimension(100, 20));
         //yLabel.setBorder(new LineBorder(Color.black));
 
@@ -217,7 +230,7 @@ public class ServerGUI extends JFrame {
         yField.addKeyListener(textCheck);
 
         //Кнопки
-        addButton = new JButton("Добавить элемент");
+        addButton = new JButton(bundle.getString("add"));
         addButton.setEnabled(false);
         addButton.addActionListener(new ActionListener() {
             @Override
@@ -250,7 +263,7 @@ public class ServerGUI extends JFrame {
                 executor.execute();
             }
         });
-        removeButton = new JButton("Удалить элемент");
+        removeButton = new JButton(bundle.getString("remove"));
         removeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -260,7 +273,7 @@ public class ServerGUI extends JFrame {
             }
         });
         removeButton.setEnabled(false);
-        removeLowerButton = new JButton("Удалить все с ключом меньше");
+        removeLowerButton = new JButton(bundle.getString("removeLower"));
         removeLowerButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -279,26 +292,87 @@ public class ServerGUI extends JFrame {
         helpButton.setBorder(BorderFactory.createEmptyBorder(4, 4, 2, 20));
         helpButton.setPreferredSize(new Dimension(36, 30));
         helpButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                JPopupMenu infoMenu = new JPopupMenu();
-                JLabel info = new JLabel("<html>Формат добавления объекта:<br/><br/>" +
-                        "ID - число<br/>" +
-                        "Брызги - число 1 .. 10<br/>" +
-                        "Глубина - число 1 .. 10<br/>" +
-                        "Цвет - Синий / Желтый / Красный / Оранжевый<br/>" +
-                        "Координата X - число 0 .. 800<br/>" +
-                        "Координата Y - число 0 .. 400</html>");
-                // info.setPreferredSize(new Dimension(500,500));
-                info.setFont(new Font("Arial", Font.PLAIN, 18));
-                Border paddingBorder = BorderFactory.createEmptyBorder(10, 10, 10, 10);
-                Border border = BorderFactory.createLineBorder(Color.BLACK, 1);
-                info.setBorder(BorderFactory.createCompoundBorder(border, paddingBorder));
-                infoMenu.setBorder(BorderFactory.createLineBorder(Color.black, 1, true));
-                infoMenu.add(info);
-                infoMenu.show(collectionTable, collectionTable.getWidth() / 4 - 30, 20);
-            }
-        });
+                                         @Override
+                                         public void actionPerformed(ActionEvent e) {
+//                JPopupMenu infoMenu = new JPopupMenu();
+//                JLabel info = new JLabel("<html>Формат добавления объекта:<br/><br/>" +
+//                        "ID - число<br/>" +
+//                        "Брызги - число 1 .. 10<br/>" +
+//                        "Глубина - число 1 .. 10<br/>" +
+//                        "Цвет - Синий / Желтый / Красный / Оранжевый<br/>" +
+//                        "Координата X - число 0 .. 800<br/>" +
+//                        "Координата Y - число 0 .. 400</html>");
+//                // info.setPreferredSize(new Dimension(500,500));
+//                info.setFont(new Font("Arial", Font.PLAIN, 18));
+//                Border paddingBorder = BorderFactory.createEmptyBorder(10, 10, 10, 10);
+//                Border border = BorderFactory.createLineBorder(Color.BLACK, 1);
+//                info.setBorder(BorderFactory.createCompoundBorder(border, paddingBorder));
+//                infoMenu.setBorder(BorderFactory.createLineBorder(Color.black, 1, true));
+//                infoMenu.add(info);
+//                infoMenu.show(collectionTable, collectionTable.getWidth() / 4 - 30, 20);
+
+                                             new JFrame() {
+                                                 {
+                                                     setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+                                                     setSize(180, 230);
+                                                     setLocationRelativeTo(null);
+                                                     setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
+                                                     setResizable(false);
+                                                     JLabel msg = new JLabel(bundle.getString("chooseLanguage"));
+
+                                                     JButton russian = new JButton("Русский");
+                                                     russian.setPreferredSize(new Dimension(150, 25));
+                                                     russian.addActionListener(new ActionListener() {
+                                                         @Override
+                                                         public void actionPerformed(ActionEvent e) {
+                                                             changeLanguage("ru");
+                                                             setVisible(false);
+                                                             dispose();
+                                                         }
+                                                     });
+                                                     JButton netherlands = new JButton("Nederlandse");
+                                                     netherlands.setPreferredSize(new Dimension(150, 25));
+                                                     netherlands.addActionListener(new ActionListener() {
+                                                         @Override
+                                                         public void actionPerformed(ActionEvent e) {
+                                                             changeLanguage("nl");
+                                                             setVisible(false);
+                                                             dispose();
+                                                         }
+                                                     });
+                                                     JButton cathalonic = new JButton("Catalaanse");
+                                                     cathalonic.setPreferredSize(new Dimension(150, 25));
+                                                     cathalonic.addActionListener(new ActionListener() {
+                                                         @Override
+                                                         public void actionPerformed(ActionEvent e) {
+                                                             changeLanguage("ca");
+                                                             setVisible(false);
+                                                             dispose();
+                                                         }
+                                                     });
+                                                     JButton spanish = new JButton("Español");
+                                                     spanish.setPreferredSize(new Dimension(150, 25));
+                                                    spanish.addActionListener(new ActionListener() {
+                                                        @Override
+                                                        public void actionPerformed(ActionEvent e) {
+                                                            setVisible(false);
+                                                            dispose();
+                                                            changeLanguage("es", "PR");
+                                                        }
+                                                    });
+
+
+                                                    add(msg);
+                                                     add(russian);
+                                                     add(netherlands);
+                                                     add(cathalonic);
+                                                     add(spanish);
+                                                     setVisible(true);
+
+                                                 }
+                                             };
+                                         }
+                                     });
 
         undoButton = new JButton();
         undoButton.setIcon(new ImageIcon("C:/Users/Daniil/iCloudDrive/ИТМО/1 курс/2 семестр/Лабы/Програмированние/Lab6/src/Server/Icons/undo.png"));
@@ -484,7 +558,7 @@ public class ServerGUI extends JFrame {
         JMenuItem ban, unban;
 
         public PopUp(int row, JTable table) {
-            ban = new JMenuItem("Забанить");
+            ban = new JMenuItem(bundle.getString("toBan"));
             ban.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -503,7 +577,7 @@ public class ServerGUI extends JFrame {
                     }
                 }
             });
-            unban = new JMenuItem("Разбанить");
+            unban = new JMenuItem(bundle.getString("toUnban"));
             unban.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -548,17 +622,21 @@ public class ServerGUI extends JFrame {
             if (command != null && params != null) {
                 command.setParams(params);
                 Command.Feedback feedback = command.execute(SingletonCollection.getCollection(), params);
-                String resultMessage = feedback.message;
+                String resultMessage = bundle.getString(feedback.message);
                 pushToHistory(command, feedback);
-                JOptionPane.showMessageDialog(collectionTable, resultMessage, "Сообщение", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(collectionTable, resultMessage, bundle.getString("message"), JOptionPane.INFORMATION_MESSAGE);
                 if (feedback.wasExecuted) {
                     updateTable(SingletonCollection.getCollection());
                     if(command instanceof Undoable)
-                    sendCollectionToAll();
+                        SingletonCollection.importFromJson("");
+                    updateTable(SingletonCollection.getCollection());
+                        sendCollectionToAll();
                 }
             } else throw new RuntimeException("Executor is not configured");
             if (toClearUndoStack) redoStack.clear();
             setToClearUndoStack(true);
+
+
         }
     }
 
@@ -587,6 +665,50 @@ public class ServerGUI extends JFrame {
         DatagramPacket fakeReceivedPacket = new DatagramPacket(message, message.length, user.getAddress(), user.getPort());
         new CommandExecutor(fakeReceivedPacket, socket, SingletonCollection.getCollection(), user.isBanned()).start();
     }
+
+
+    private void changeLanguage(String language, String country) {
+        bundle=ResourceBundle.getBundle("Common.Resources.Resource", new Locale(language, country));
+        nameLabel.setText(bundle.getString("name"));
+        splashLabel.setText(bundle.getString("splash"));
+        depthLabel.setText(bundle.getString("depth"));
+        colorLabel.setText(bundle.getString("color"));
+        xLabel.setText(bundle.getString("x"));
+        yLabel.setText(bundle.getString("y"));
+        addButton.setText(bundle.getString("add"));
+        removeButton.setText(bundle.getString("remove"));
+        removeLowerButton.setText(bundle.getString("removeLower"));
+        controlMenu.setText(bundle.getString("control"));
+        menuItemImport.setText(bundle.getString("import"));
+        menuItemSave.setText(bundle.getString("save"));
+        menuConnections.setText(bundle.getString("connections"));
+    }
+
+    private void changeLanguage(String language) {
+        bundle = ResourceBundle.getBundle("Common.Resources.Resource", new Locale(language));
+        nameLabel.setText(bundle.getString("name"));
+        splashLabel.setText(bundle.getString("splash"));
+        depthLabel.setText(bundle.getString("depth"));
+        colorLabel.setText(bundle.getString("color"));
+        xLabel.setText(bundle.getString("x"));
+        yLabel.setText(bundle.getString("y"));
+        addButton.setText(bundle.getString("add"));
+        removeButton.setText(bundle.getString("remove"));
+        removeLowerButton.setText(bundle.getString("removeLower"));
+        controlMenu.setText(bundle.getString("control"));
+        menuItemImport.setText(bundle.getString("import"));
+        menuItemSave.setText(bundle.getString("save"));
+        menuConnections.setText(bundle.getString("connections"));
+
+
+        collectionColumnNames = new String[] {"ID", bundle.getString("name"), bundle.getString("splash"),
+                bundle.getString("depth"), bundle.getString("color"), bundle.getString("x"),bundle.getString("y")};
+        usersColumnNames = new String[] {bundle.getString("ip"), bundle.getString("port"), bundle.getString("ban")};
+        collectionModel.setColumnIdentifiers(collectionColumnNames);
+        usersModel.setColumnIdentifiers(usersColumnNames);
+        setTitle(bundle.getString("server"));
+    }
+
 }
 
 

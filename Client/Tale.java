@@ -102,7 +102,7 @@ public class Tale extends Script {
         Iterator<Map.Entry> iter = entrySet.iterator();
         while (iter.hasNext()) {
             FallingInRiver dude = (FallingInRiver) iter.next().getValue();
-            dude.tick();
+            //dude.tick();
         }
     }
 

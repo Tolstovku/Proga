@@ -59,7 +59,7 @@ public class CommandExecutor extends Thread {
                     break;
                 case "unban":
                     respond = Commands.remove(map, param);
-                    sendBuf = serializeString("Вы были разбанены");
+                    sendBuf = serializeString("youUnbanned");
                     break;
                 case "remove_lower":
                     respond = Commands.remove_lower(map, param);
@@ -94,7 +94,7 @@ public class CommandExecutor extends Thread {
             }
             try {
                 if (isBanned) {
-                    sendBuf=serializeString("Вы были забанены.");
+                    sendBuf=serializeString("youBanned");
                     System.out.println(new String(sendBuf));
                 }
                 sendPacket = new DatagramPacket(sendBuf, sendBuf.length, clientIPAdress, clientPort);

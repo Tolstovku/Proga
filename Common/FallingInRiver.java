@@ -1,5 +1,9 @@
 package Common;
 
+import Server.ORM.Column;
+import Server.ORM.PrimaryKey;
+import Server.ORM.Table;
+
 import java.awt.*;
 import java.io.Serializable;
 import java.time.OffsetDateTime;
@@ -9,6 +13,7 @@ import java.awt.color.*;
 
 import static java.awt.Color.*;
 
+@Table(name = "Падения_в_реку")
 public class FallingInRiver implements Comparable<FallingInRiver>, Serializable {
 
     public enum COLOR{
@@ -32,16 +37,36 @@ public class FallingInRiver implements Comparable<FallingInRiver>, Serializable 
 
     }
 
+    @Column(name = "Имя")
+    private  String charName;
+
+    @Column(name = "Брызги")
+    private  int splashLvl;
+
+    @Column(name = "Глубина")
+    private  double depth;
 
 
-    private final String charName;
-    private final int splashLvl;
-    private final double depth;
-    private final OffsetDateTime timeStamp = OffsetDateTime.now();
-    private final COLOR color;
-    private final int x, y;
-    private final int id;
-    private int timer;
+
+
+    @Column(name = "Цвет")
+    private String colorString;
+    @Column(name = "Координата_X")
+    private  int x;
+
+    @Column(name = "Координата_Y")
+    private  int y;
+
+    @PrimaryKey
+    @Column(name = "ИД")
+    public int id;
+
+    //private int timer;
+    private  COLOR color;
+
+    //private OffsetDateTime timeStamp;
+
+    public FallingInRiver(){};
 
     public FallingInRiver(int id, String charName, int splashLvl, double depth, String color, int x, int y) {
         this.charName = charName;
@@ -53,8 +78,8 @@ public class FallingInRiver implements Comparable<FallingInRiver>, Serializable 
             this.splashLvl = splashLvl;
         this.depth = depth;
         this.id = id;
-        this.timer = (int) (Math.random() * 11);
-        if (timer < 3) timer *= 2;
+//        this.timer = (int) (Math.random() * 11);
+//        if (timer < 3) timer *= 2;
         this.x=x;
         this.y=y;
         switch(color){
@@ -75,11 +100,32 @@ public class FallingInRiver implements Comparable<FallingInRiver>, Serializable 
                 this.color=COLOR.YELLOW;
                 break;
             default:
-                this.color=null;
+                this.color=COLOR.ORANGE;
                 //System.out.println("Недопустимый цвет у объекта " + charName + ", id:" + id + ". Установлен желтый цвет.");
                 //this.color=COLOR.YELLOW;
         }
 
+        //timeStamp= OffsetDateTime.now();
+
+        switch(this.color){
+            case ORANGE:
+                colorString="Оранжевый";
+                break;
+            case BLUE:
+                colorString="Синий";
+                break;
+            case RED:
+                colorString="Красный";
+                break;
+            case YELLOW:
+                colorString="Желтый";
+                break;
+            default:
+                colorString=null;
+                //System.out.println("Недопустимый цвет у объекта " + charName + ", id:" + id + ". Установлен желтый цвет.");
+                //this.color=COLOR.YELLOW;
+
+        }
     }
 
     public int getId() {
@@ -104,13 +150,13 @@ public class FallingInRiver implements Comparable<FallingInRiver>, Serializable 
 
     public COLOR getColor() {return color;}
 
-    public void tick() {
-        timer -= 1;
-        if (timer <= 0) {
-            action();
-            timer = (int) (Math.random() * 11);
-        }
-    }
+//    public void tick() {
+//        timer -= 1;
+//        if (timer <= 0) {
+//            action();
+//            timer = (int) (Math.random() * 11);
+//        }
+//    }
 
 
 

@@ -9,7 +9,7 @@ public class SingletonGUI {
 
     public static ClientGUI getGUI(){
         if (gui==null)
-            gui= new ClientGUI("Клиент");
+            gui= new ClientGUI();
         return gui;
     }
 

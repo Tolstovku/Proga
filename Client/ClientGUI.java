@@ -9,6 +9,8 @@ import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.util.ArrayList;
+import java.util.Locale;
+import java.util.ResourceBundle;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -20,7 +22,7 @@ public class ClientGUI extends JFrame {
     private ConcurrentHashMap<Integer, FallingInRiver> collection;
     private final int frameWidth = 850, frameHeight = 700;
     private Graph g;
-    private JButton startButton, stopButton, updateButton;
+    private JButton startButton, stopButton, updateButton, languageButton;
     private JRadioButton orangeRadio, blueRadio, redRadio, yellowRadio;
     private ButtonGroup buttonGroup;
     private JFormattedTextField nameField;
@@ -37,9 +39,10 @@ public class ClientGUI extends JFrame {
     //Очень хитро... таймер для эффекта исчезания
     private Timer fadeTimer = new Timer(10, new TimerListener());
 
+    private ResourceBundle bundle = ResourceBundle.getBundle("Common.Resources.Resource");
 
-    public ClientGUI(String windowName) { // добавить сюда мапу
-        super(windowName);
+    public ClientGUI() { // добавить сюда мапу
+        setTitle(bundle.getString("client"));
             ConnectionHandler.getMap();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -53,13 +56,12 @@ public class ClientGUI extends JFrame {
 
 
     public void init() {
-
         setVisible(false);
         getContentPane().removeAll();
 
 
         //Кнопки старт | стоп | обновить | помощь [?]
-        startButton = new JButton("Старт");
+        startButton = new JButton(bundle.getString("start"));
         startButton.setPreferredSize(new Dimension(80, 30));
         startButton.addActionListener(new ActionListener() {
             @Override
@@ -71,7 +73,7 @@ public class ClientGUI extends JFrame {
 
             }
         });
-        stopButton = new JButton("Стоп");
+        stopButton = new JButton(bundle.getString("stop"));
         stopButton.setPreferredSize(new Dimension(80, 30));
         stopButton.setEnabled(false);
         stopButton.addActionListener(new ActionListener() {
@@ -89,7 +91,7 @@ public class ClientGUI extends JFrame {
                 lock.unlock();
             }
         });
-        updateButton = new JButton("Обновить");
+        updateButton = new JButton(bundle.getString("update"));
         updateButton.setPreferredSize(new Dimension(90, 30));
         updateButton.addActionListener(new ActionListener() {
             @Override
@@ -104,15 +106,82 @@ public class ClientGUI extends JFrame {
             }
         });
 
+
+        languageButton = new JButton(bundle.getString("language"));
+        languageButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new JFrame() {
+                    {
+                        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+                        setSize(180, 230);
+                        setLocationRelativeTo(null);
+                        setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
+                        setResizable(false);
+                        JLabel msg = new JLabel(bundle.getString("chooseLanguage"));
+
+                        JButton russian = new JButton("Русский");
+                        russian.setPreferredSize(new Dimension(150, 25));
+                        russian.addActionListener(new ActionListener() {
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                changeLanguage("ru");
+                                setVisible(false);
+                                dispose();
+                            }
+                        });
+                        JButton netherlands = new JButton("Nederlandse");
+                        netherlands.setPreferredSize(new Dimension(150, 25));
+                        netherlands.addActionListener(new ActionListener() {
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                changeLanguage("nl");
+                                setVisible(false);
+                                dispose();
+                            }
+                        });
+                        JButton cathalonic = new JButton("Catalaanse");
+                        cathalonic.setPreferredSize(new Dimension(150, 25));
+                        cathalonic.addActionListener(new ActionListener() {
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                changeLanguage("ca");
+                                setVisible(false);
+                                dispose();
+                            }
+                        });
+                        JButton spanish = new JButton("Español");
+                        spanish.setPreferredSize(new Dimension(150, 25));
+                        spanish.addActionListener(new ActionListener() {
+                            @Override
+                            public void actionPerformed(ActionEvent e) {
+                                changeLanguage("es", "PR");
+                                setVisible(false);
+                                dispose();
+                            }
+                        });
+
+
+                        add(msg);
+                        add(russian);
+                        add(netherlands);
+                        add(cathalonic);
+                        add(spanish);
+                        setVisible(true);
+
+                    }
+                };
+            }
+        });
         //***ФИЛЬТРЫ***
         //Радио кнопки
-        orangeRadio = new JRadioButton("Оранжевый");
+        orangeRadio = new JRadioButton(bundle.getString("orange"));
         orangeRadio.setActionCommand(orangeRadio.getText()); // это нужно чтобы потом вычислить нажатую
-        blueRadio = new JRadioButton("Синий");
+        blueRadio = new JRadioButton(bundle.getString("blue"));
         blueRadio.setActionCommand(blueRadio.getText());
-        redRadio = new JRadioButton("Красный");
+        redRadio = new JRadioButton(bundle.getString("red"));
         redRadio.setActionCommand(redRadio.getText());
-        yellowRadio = new JRadioButton("Желтый");
+        yellowRadio = new JRadioButton(bundle.getString("yellow"));
         yellowRadio.setActionCommand(yellowRadio.getText());
         buttonGroup = new ButtonGroup();
         buttonGroup.add(orangeRadio);
@@ -121,13 +190,13 @@ public class ClientGUI extends JFrame {
         buttonGroup.add(yellowRadio);
 
         //Подписи к слайдерам
-        minXLabel = new JLabel("Минимальный X", SwingConstants.CENTER);
+        minXLabel = new JLabel(bundle.getString("minX"), SwingConstants.CENTER);
         minXLabel.setPreferredSize(new Dimension((int) (frameWidth / 2 - frameWidth * 0.15 - 100), 25));
-        maxXLabel = new JLabel("Максимальный X", SwingConstants.CENTER);
+        maxXLabel = new JLabel(bundle.getString("maxX"), SwingConstants.CENTER);
         maxXLabel.setPreferredSize(new Dimension((int) (frameWidth / 2 - frameWidth * 0.15 - 100), 25));
-        minYLabel = new JLabel("Минимальный Y", SwingConstants.CENTER);
+        minYLabel = new JLabel(bundle.getString("minY"), SwingConstants.CENTER);
         minYLabel.setPreferredSize(new Dimension((int) (frameWidth / 2 - frameWidth * 0.15 - 100), 25));
-        maxYLabel = new JLabel("Максимальный Y", SwingConstants.CENTER);
+        maxYLabel = new JLabel(bundle.getString("maxY"), SwingConstants.CENTER);
         maxYLabel.setPreferredSize(new Dimension((int) (frameWidth / 2 - frameWidth * 0.15) - 100, 25));
 
         //Слайдеры
@@ -153,10 +222,10 @@ public class ClientGUI extends JFrame {
         maxYSlider.setPaintTicks(true);
 
         //Подписи к спиннерам
-        minSplashLabel = new JLabel("Мин. брызги");
-        maxSplashLabel = new JLabel("Макс. брызги");
-        minDepthLabel = new JLabel("Мин. глубина");
-        maxDepthLabel = new JLabel("Макс. глубина");
+        minSplashLabel = new JLabel(bundle.getString("minSplash"));
+        maxSplashLabel = new JLabel(bundle.getString("maxSplash"));
+        minDepthLabel = new JLabel(bundle.getString("minDepth"));
+        maxDepthLabel = new JLabel(bundle.getString("maxDepth"));
 
 
         //Спиннеры xDDDDDDDDDD
@@ -182,7 +251,7 @@ public class ClientGUI extends JFrame {
         add(Box.createRigidArea(new Dimension(45, 30)));
         add(updateButton);
         add(Box.createRigidArea(new Dimension((int) (frameWidth / 2 - frameWidth * 0.3), 30)));
-
+        add(languageButton);
 
         add(Box.createRigidArea(new Dimension((int) (frameWidth / 2 - frameWidth * 0.235), 30)));
         add(orangeRadio);
@@ -246,7 +315,7 @@ public class ClientGUI extends JFrame {
         if (buttonGroup.getSelection() == null) {
             stopButton.setEnabled(false);
             startButton.setEnabled(true);
-            JOptionPane.showMessageDialog(g, "Не выбран цвет", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(g, bundle.getString("noColor"), bundle.getString("error"), JOptionPane.ERROR_MESSAGE);
             lock.unlock();
             return;
         }
@@ -263,7 +332,7 @@ public class ClientGUI extends JFrame {
         else {
             stopButton.setEnabled(false);
             startButton.setEnabled(true);
-            JOptionPane.showMessageDialog(g, "Нет объектов, удовлетворяющих фильтрам.");
+            JOptionPane.showMessageDialog(g, bundle.getString("noFilteredObjects"));
             lock.unlock();
         }
         fadeInOver = false;
@@ -311,12 +380,59 @@ public class ClientGUI extends JFrame {
         }
     }
 
-    private void showYouAreBannedMessage() {
-        JOptionPane.showMessageDialog(g, "Доступ к серверу заблокирован", "Ошибка", JOptionPane.ERROR_MESSAGE);
-    }
 
     public void showMessage(String message){
-        JOptionPane.showMessageDialog(g, message);
+        JOptionPane.showMessageDialog(g, bundle.getString(message), bundle.getString("message"), JOptionPane.INFORMATION_MESSAGE);
+    }
+
+
+    private void changeLanguage(String language, String country) {
+        bundle=ResourceBundle.getBundle("Common.Resources.Resource", new Locale(language, country));
+        startButton.setText(bundle.getString("start"));
+        stopButton.setText(bundle.getString("stop"));
+        updateButton.setText(bundle.getString("update"));
+        orangeRadio.setText(bundle.getString("orange"));
+        blueRadio.setText(bundle.getString("blue"));
+        redRadio.setText(bundle.getString("red"));
+        yellowRadio.setText(bundle.getString("yellow"));
+        minXLabel.setText(bundle.getString("minX"));
+        maxXLabel.setText(bundle.getString("maxX"));
+        minYLabel.setText(bundle.getString("minY"));
+        maxYLabel.setText(bundle.getString("maxY"));
+        minSplashLabel.setText(bundle.getString("minSplash"));
+        maxSplashLabel.setText(bundle.getString("maxSplash"));
+        minDepthLabel.setText(bundle.getString("minDepth"));
+        maxDepthLabel.setText(bundle.getString("maxDepth"));
+        setTitle(bundle.getString("client"));
+
+
+
+        setTitle(bundle.getString("client"));
+    }
+
+    private void changeLanguage(String language) {
+        bundle = ResourceBundle.getBundle("Common.Resources.Resource", new Locale(language));
+        startButton.setText(bundle.getString("start"));
+        stopButton.setText(bundle.getString("stop"));
+        updateButton.setText(bundle.getString("update"));
+        orangeRadio.setText(bundle.getString("orange"));
+        blueRadio.setText(bundle.getString("blue"));
+        redRadio.setText(bundle.getString("red"));
+        yellowRadio.setText(bundle.getString("yellow"));
+        minXLabel.setText(bundle.getString("minX"));
+        maxXLabel.setText(bundle.getString("maxX"));
+        minYLabel.setText(bundle.getString("minY"));
+        maxYLabel.setText(bundle.getString("maxY"));
+        minSplashLabel.setText(bundle.getString("minSplash"));
+        maxSplashLabel.setText(bundle.getString("maxSplash"));
+        minDepthLabel.setText(bundle.getString("minDepth"));
+        maxDepthLabel.setText(bundle.getString("maxDepth"));
+        languageButton.setText(bundle.getString("language"));
+        setTitle(bundle.getString("client"));
+
+
+
+        setTitle(bundle.getString("client"));
     }
 }
 

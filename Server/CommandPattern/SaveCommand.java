@@ -37,7 +37,7 @@ public class SaveCommand extends Command {
                 readLock.unlock();
             }
             System.out.println("Коллекция успешно сохранена");
-            return new Feedback(true,"Коллекция успешно сохранена");
-        } else return new Feedback(false, "Файл не найден");
+            return new Feedback(true,"saved");
+        } else return new Feedback(false, "fileNotFound");
     }
 }
